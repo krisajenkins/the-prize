@@ -1,8 +1,8 @@
 module Main (..) where
 
 import Console
-import Task exposing (Task)
 import ElmTest exposing (..)
+import Task exposing (Task)
 
 
 tests : Test

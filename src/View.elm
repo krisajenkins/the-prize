@@ -12,8 +12,8 @@ import Dict
 root : Address Action -> Model -> Html
 root address model =
   svg
-    [ width "1000px"
-    , height "1000px"
+    [ width (px 800)
+    , height (px 400)
     ]
     [ g
         []
@@ -23,8 +23,9 @@ root address model =
         )
     , tile address model.player.position Character
     , text'
-        [ x "0px"
-        , y "340px"
+        [ x (px tileSize)
+        , y "350px"
+        , fontSize "24px"
         ]
         [ text (Maybe.withDefault "" model.dialogue) ]
     ]
@@ -35,25 +36,30 @@ tileSize =
   40
 
 
+px : Int -> String
+px n =
+  toString n ++ "px"
+
+
 tile : Address Action -> Position -> Cell -> Svg
 tile address position cell =
   let
     colours =
       case cell of
         Path ->
-          [ stroke "grey", fill "white" ]
+          [ stroke "grey", fill "#fdfdfd" ]
 
         Block ->
-          [ stroke "black", fill "chartreuse" ]
+          [ stroke "#0466da", fill "#04c9da" ]
 
         Character ->
-          [ stroke "grey", fill "turquoise" ]
+          [ stroke "#8504da", fill "#e4049a" ]
   in
     rect
       ([ x (toString (fst position * tileSize))
        , y (toString (snd position * tileSize))
-       , width (toString tileSize ++ "px")
-       , height (toString tileSize ++ "px")
+       , width (px tileSize)
+       , height (px tileSize)
        , onClick (Signal.message address (MoveTo position))
        ]
         ++ colours

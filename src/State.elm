@@ -4,9 +4,13 @@ import Types exposing (..)
 import Effects exposing (..)
 import Dict
 import Time exposing (Time)
-import Task exposing (Task)
 import Astar
 import Array
+
+
+stepTime : Time
+stepTime =
+  150 * Time.millisecond
 
 
 wall : List Position -> List ( Position, Cell )
@@ -56,8 +60,8 @@ initialWorld =
       , horizontalWall xRange minY
       , horizontalWall xRange maxY
       , horizontalWall [4..10] 4
-      , verticalWall 4 [4..5]
-      , verticalWall 8 [3..5]
+      , verticalWall 4 [4..6]
+      , verticalWall 8 [2..6]
       , horizontalWall [12..13] 2
       ]
     )
@@ -70,6 +74,7 @@ initialModel =
   , dialogue = Just "Well, I guess I'd better look around..."
   , player = { position = ( 3, 3 ) }
   , destination = Nothing
+  , timeSinceLastMove = Nothing
   }
 
 
@@ -84,72 +89,92 @@ updateWithDialogue action model =
     MoveTo newDestination ->
       if canStandOn (objectAt model.world newDestination) then
         ( { model | destination = Just newDestination }
-        , Nothing
+        , Just "Chaaaaarrrrrrge!"
         )
       else
         ( model
-        , Just "I can't do that Dave."
+        , Just "Sorry, I can't walk through walls."
         )
 
-    Tick ->
+    Tick time ->
       case model.destination of
         Nothing ->
-          ( model, Nothing )
+          ( { model | timeSinceLastMove = Nothing }
+          , Nothing
+          )
 
         Just destination ->
-          case
-            Astar.findPath
-              estimatedDistance
-              (validMovesFrom model.world)
-              (model.player.position)
-              destination
-          of
-            Nothing ->
-              ( { model | destination = Nothing }
-              , Just "Doesn't look like I'll make it."
-              )
-
-            Just path ->
-              case Array.get 0 path of
+          let
+            previousTime =
+              Maybe.withDefault 0 model.timeSinceLastMove
+          in
+            if previousTime + stepTime > time then
+              ( model, Nothing )
+            else
+              case
+                Astar.findPath
+                  estimatedDistance
+                  (validMovesFrom model.world)
+                  (model.player.position)
+                  destination
+              of
                 Nothing ->
-                  ( { model | destination = Nothing }
-                  , Just "J'arrive!"
+                  ( { model
+                      | destination = Nothing
+                      , timeSinceLastMove = Nothing
+                    }
+                  , Just "Hmm...I can't find a way there."
                   )
 
-                Just p ->
-                  let
-                    player =
-                      model.player
+                Just path ->
+                  case Array.get 0 path of
+                    Nothing ->
+                      ( { model
+                          | destination = Nothing
+                          , timeSinceLastMove = Nothing
+                        }
+                      , case objectAt model.world model.player.position of
+                          Nothing ->
+                            Nothing
 
-                    newPlayer =
-                      { player | position = p }
-                  in
-                    ( { model | player = newPlayer }
-                    , Just ("Step.  " ++ (toString (Array.length path - 1)) ++ " more to go.")
-                    )
+                          Just Character ->
+                            Just "Hello."
+
+                          Just Path ->
+                            Just "It's nice here."
+
+                          Just Block ->
+                            Just "Help, I'm stuck in a wall!"
+                      )
+
+                    Just p ->
+                      let
+                        player =
+                          model.player
+                      in
+                        ( { model
+                            | player = { player | position = p }
+                            , timeSinceLastMove = Just time
+                          }
+                        , Nothing
+                        )
 
 
 update : Action -> Model -> Model
 update action model =
   let
-    ( newModel, dialogue ) =
+    ( newModel, newDialogue ) =
       updateWithDialogue action model
   in
-    { newModel | dialogue = dialogue }
+    if newDialogue == Nothing then
+      newModel
+    else
+      { newModel | dialogue = newDialogue }
 
 
 effects : Action -> ( Model, Model ) -> Effects Action
 effects action ( _, model ) =
-  case model.destination of
-    Nothing ->
-      none
-
-    Just _ ->
-      tickIn (200 * Time.millisecond)
-
-
-tickIn : Time -> Effects Action
-tickIn t =
-  Task.sleep t
-    |> Effects.task
-    |> Effects.map (always Tick)
+  if model.destination == Nothing then
+    none
+  else
+    tick Tick

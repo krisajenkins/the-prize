@@ -2,6 +2,7 @@ module Types (..) where
 
 import Dict exposing (Dict)
 import Set exposing (Set)
+import Time exposing (Time)
 
 
 type alias Position =
@@ -20,7 +21,7 @@ type Cell
 
 type Action
   = MoveTo Position
-  | Tick
+  | Tick Time
 
 
 type alias Player =
@@ -32,6 +33,7 @@ type alias Model =
   , player : Player
   , dialogue : Maybe String
   , destination : Maybe Position
+  , timeSinceLastMove : Maybe Time
   }
 
 

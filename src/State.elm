@@ -10,7 +10,7 @@ import Array
 
 stepTime : Time
 stepTime =
-  150 * Time.millisecond
+  100 * Time.millisecond
 
 
 wall : List Position -> List ( Position, Cell )

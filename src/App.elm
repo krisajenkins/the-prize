@@ -14,7 +14,17 @@ app =
   StartApp.start
     { init = ( initialModel, initialEffects )
     , view = View.root
-    , update = update
+    , update =
+        (\action oldModel ->
+          let
+            newModel =
+              update (Debug.log "ACTION" action) oldModel
+
+            newEffects =
+              effects action ( oldModel, newModel )
+          in
+            ( newModel, newEffects )
+        )
     , inputs = []
     }
 

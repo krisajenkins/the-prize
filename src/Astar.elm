@@ -71,10 +71,10 @@ bestCost newDistance oldDistance =
 
 
 updateCost : Position -> Position -> Model -> Model
-updateCost next neighbour model =
+updateCost current neighbour model =
   let
     newCameFrom =
-      Dict.insert neighbour next model.cameFrom
+      Dict.insert neighbour current model.cameFrom
 
     distanceTo =
       Array.length (reconstructPath newCameFrom neighbour)
@@ -97,43 +97,56 @@ updateCost next neighbour model =
 
 
 astar : (Position -> Position -> Int) -> (Position -> Set Position) -> Position -> Model -> Maybe Path
-astar costFn movesFrom goal model =
+astar costFn moveFn goal model =
   case cheapestOpen (costFn goal) model of
     Nothing ->
       Nothing
 
-    Just next ->
-      if next == goal then
+    Just current ->
+      if current == goal then
         Just (reconstructPath model.cameFrom goal)
       else
         let
           modelPopped =
             { model
-              | openSet = Set.remove next model.openSet
-              , evaluated = Set.insert next model.evaluated
+              | openSet = Set.remove current model.openSet
+              , evaluated = Set.insert current model.evaluated
             }
 
           neighbours =
-            movesFrom next
+            moveFn current
 
           newNeighbours =
             Set.diff neighbours modelPopped.evaluated
 
           modelWithNeighbours =
             { modelPopped
-              | openSet = Set.union modelPopped.openSet newNeighbours
+              | openSet =
+                  Set.union
+                    modelPopped.openSet
+                    newNeighbours
             }
 
           modelWithCosts =
-            Set.foldl
-              (updateCost next)
-              modelWithNeighbours
-              newNeighbours
+            Set.foldl (updateCost current) modelWithNeighbours newNeighbours
         in
-          astar costFn movesFrom goal modelWithCosts
+          astar costFn moveFn goal modelWithCosts
 
 
+{-| Find a path between `start` and `end`. You must supply a cost function and a move function.
+
+  The cost function must estimate the distance between any two
+  positions. It doesn't really matter how accurate this estimate is,
+  as long as it _never_ underestimates.
+
+  The move function takes a `Position` and returns a `Set` of possible
+  places you can move to in one step.
+
+  If this function returns `Nothing`, there is no path between the two
+  points. Otherwise it returns `Just` an `Array` of steps from `start`
+  to `end`.
+-}
 findPath : (Position -> Position -> Int) -> (Position -> Set Position) -> Position -> Position -> Maybe Path
-findPath costFn movesFrom start goal =
+findPath costFn moveFn start end =
   initialModel start
-    |> astar costFn movesFrom goal
+    |> astar costFn moveFn end

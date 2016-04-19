@@ -1,4 +1,4 @@
-module Astar (initialModel, findPath, Position, Path) where
+module Astar (findPath, Position, Path) where
 
 import Set exposing (Set)
 import Dict exposing (Dict)
